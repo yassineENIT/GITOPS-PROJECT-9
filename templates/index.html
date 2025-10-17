@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Prédiction Qualité - Smart Factory</title>
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <meta name="color-scheme" content="light dark" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏭</text></svg>">
+  
+  <!-- Configuration Tailwind personnalisée -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: {
+              50: '#f0f9ff',
+              100: '#e0f2fe',
+              500: '#0ea5e9',
+              600: '#0284c7',
+              700: '#0369a1',
+            }
+          },
+          animation: {
+            'fade-in': 'fadeIn 0.5s ease-in-out',
+            'slide-up': 'slideUp 0.3s ease-out',
+          },
+          keyframes: {
+            fadeIn: {
+              '0%': { opacity: '0' },
+              '100%': { opacity: '1' },
+            },
+            slideUp: {
+              '0%': { transform: 'translateY(10px)', opacity: '0' },
+              '100%': { transform: 'translateY(0)', opacity: '1' },
+            }
+          }
+        }
+      }
+    }
+  </script>
+  
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    
+    body {
+      font-family: 'Inter', sans-serif;
+    }
+    
+    .gradient-bg {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+    
+    .glass-effect {
+      background: rgba(255, 255, 255, 0.25);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+    }
+    
+    .dark .glass-effect {
+      background: rgba(0, 0, 0, 0.25);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    .input-focus:focus {
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+    
+    .btn-primary {
+      background: linear-gradient(135deg, #0ea5e9, #0369a1);
+      transition: all 0.3s ease;
+    }
+    
+    .btn-primary:hover {
+      background: linear-gradient(135deg, #0284c7, #075985);
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px rgba(2, 132, 199, 0.3);
+    }
+    
+    .btn-secondary {
+      transition: all 0.3s ease;
+    }
+    
+    .btn-secondary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    }
+  </style>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:from-slate-900 dark:via-slate-800 dark:to-indigo-900 text-slate-900 dark:text-slate-100">
+  <!-- Header avec effet glass -->
+  <header class="sticky top-0 z-10 glass-effect shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 py-4">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+          <div class="w-10 h-10 rounded-lg bg-primary-500 flex items-center justify-center text-white font-bold">
+            🏭
+          </div>
+          <div>
+            <h1 class="text-xl font-bold">Smart Factory Analytics</h1>
+            <p class="text-xs text-slate-600 dark:text-slate-300">Prédiction intelligente de qualité</p>
+          </div>
+        </div>
+        
+        <div class="flex items-center space-x-4">
+          <div class="hidden md:flex items-center space-x-2 text-sm">
+            <div class="w-2 h-2 rounded-full bg-green-500"></div>
+            <span>Système opérationnel</span>
+          </div>
+          <button id="theme-toggle" class="p-2 rounded-lg bg-slate-200 dark:bg-slate-700">
+            <span class="dark:hidden">🌙</span>
+            <span class="hidden dark:inline">☀️</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-4 py-8">
+    <!-- En-tête principal -->
+    <div class="text-center mb-12 animate-fade-in">
+      <h1 class="text-4xl md:text-5xl font-bold bg-gradient-to-r from-primary-600 to-blue-600 bg-clip-text text-transparent mb-4">
+        Prédiction de Catégorie de Qualité
+      </h1>
+      <p class="text-lg text-slate-600 dark:text-slate-300 max-w-3xl mx-auto">
+        Renseignez les indicateurs de production pour obtenir une prédiction de qualité (High, Medium ou Low) basée sur l'analyse de données en temps réel.
+      </p>
+    </div>
+
+    <!-- Carte principale -->
+    <div class="rounded-3xl shadow-2xl border border-slate-200/60 dark:border-slate-700 bg-white/90 dark:bg-slate-800/90 backdrop-blur-xl overflow-hidden mb-8 animate-slide-up">
+      <!-- Résultat de prédiction -->
+      {% if prediction is not none %}
+        <div class="px-8 pt-8">
+          {% set is_error = (prediction is string) and ((prediction|string|lower)[:5] == 'error') %}
+          <div class="rounded-2xl p-6 border-2
+                      {% if is_error %}
+                        border-red-200 bg-red-50/80 dark:bg-red-900/30 dark:border-red-800/50
+                      {% else %}
+                        border-green-200 bg-green-50/80 dark:bg-green-900/30 dark:border-green-800/50
+                      {% endif %} 
+                      animate-fade-in">
+            <div class="flex items-center gap-4">
+              {% if is_error %}
+                <div class="w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/50 flex items-center justify-center">
+                  <span class="text-red-600 dark:text-red-300 text-xl">⚠️</span>
+                </div>
+                <div>
+                  <h2 class="text-xl font-semibold text-red-800 dark:text-red-200">Erreur de prédiction</h2>
+                  <p class="mt-1 text-red-700 dark:text-red-300">{{ prediction }}</p>
+                </div>
+              {% else %}
+                <div class="w-12 h-12 rounded-full bg-green-100 dark:bg-green-900/50 flex items-center justify-center">
+                  <span class="text-green-600 dark:text-green-300 text-xl">📊</span>
+                </div>
+                <div>
+                  <h2 class="text-xl font-semibold text-green-800 dark:text-green-200">Résultat de la prédiction</h2>
+                  <p class="mt-1 text-green-700 dark:text-green-300 font-medium text-lg">
+                    Catégorie de qualité: <span class="font-bold">{{ prediction }}</span>
+                  </p>
+                </div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      {% endif %}
+
+      <!-- Formulaire -->
+      <div class="p-8">
+        <form method="POST" action="/" id="predict-form" novalidate>
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- Groupe 1: Paramètres d'opération -->
+            <div class="space-y-6">
+              <h3 class="text-lg font-semibold text-slate-700 dark:text-slate-300 border-b border-slate-200 dark:border-slate-700 pb-2">
+                ⚙️ Paramètres d'opération
+              </h3>
+              
+              <div>
+                <label for="Operation_Mode" class="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1 flex items-center gap-2">
+                  <span class="w-5 h-5 rounded-full bg-primary-100 dark:bg-primary-900 flex items-center justify-center text-xs">M</span>
+                  Mode d'opération
+                </label>
+                <input type="number" step="1" min="0" id="Operation_Mode" name="Operation_Mode"
+                       class="w-full input-focus rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-4 py-3 outline-none transition-all duration-200"
+                       placeholder="0 = Normal, 1 = Eco, 2 = Boost" required>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-2">Entier catégoriel selon votre encodage.</p>
+              </div>
+
+              <div>
+                <label for="Temperature_C" class="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1 flex items-center gap-2">
+                  <span class="w-5 h-5 rounded-full bg-red-100 dark:bg-red-900 flex items-center justify-center text-xs">🌡</span>
+                  Température (°C)
+                </label>
+                <input type="number" step="0.1" id="Temperature_C" name="Temperature_C"
+                       class="w-full input-focus rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-4 py-3 outline-none transition-all duration-200"
+                       placeholder="Ex. 37.5" required>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-2">Plage typique 0 à 120 selon procédé.</p>
+              </div>
+
+              <div>
+                <label for="Vibration_Hz" class="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1 flex items-center gap-2">
+                  <span class="w-5 h-5 rounded-full bg-purple-100 dark:bg-purple-900 flex items-center justify-center text-xs">📳</span>
+                  Vibration (Hz)
+                </label>
+                <input type="number" step="0.01" id="Vibration_Hz" name="Vibration_Hz"
+                       class="w-full input-focus rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-4 py-3 outline-none transition-all duration-200"
+                       placeholder="Ex. 60.00" required>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-2">Fréquence mesurée sur ligne.</p>
+              </div>
+
+              <div>
+                <label for="Power_Consumption_kW" class="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1 flex items-center gap-2">
+                  <span class="w-5 h-5 rounded-full bg-yellow-100 dark:bg-yellow-900 flex items-center justify-center text-xs">⚡</span>
+                  Consommation (kW)
+                </label>
+                <input type="number" step="0.01" id="Power_Consumption_kW" name="Power_Consumption_kW"
+                       class="w-full input-focus rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-4 py-3 outline-none transition-all duration-200"
+                       placeholder="Ex. 12.4" required>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-2">Puissance moyenne instantanée.</p>
+              </div>
+            </div>
+
+            <!-- Groupe 2: Paramètres réseau et qualité -->
+            <div class="space-y-6">
+              <h3 class="text-lg font-semibold text-slate-700 dark:text-slate-300 border-b border-slate-200 dark:border-slate-700 pb-2">
+                📡 Réseau & Qualité
+              </h3>
+              
+              <div>
+                <label for="Network_Latency_ms" class="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1 flex items-center gap-2">
+                  <span class="w-5 h-5 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-xs">⏱</span>
+                  Latence réseau (ms)
+                </label>
+                <input type="number" step="0.1" min="0" id="Network_Latency_ms" name="Network_Latency_ms"
+                       class="w-full input-focus rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-4 py-3 outline-none transition-all duration-200"
+                       placeholder="Ex. 15.3" required>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-2">Temps aller-retour moyen.</p>
+              </div>
+
+              <div>
+                <label for="Packet_Loss_%" class="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1 flex items-center gap-2">
+                  <span class="w-5 h-5 rounded-full bg-orange-100 dark:bg-orange-900 flex items-center justify-center text-xs">📦</span>
+                  Perte de paquets (%)
+                </label>
+                <input type="number" step="0.01" min="0" max="100" id="Packet_Loss_%" name="Packet_Loss_%"
+                       class="w-full input-focus rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-4 py-3 outline-none transition-all duration-200"
+                       placeholder="Ex. 0.25" required>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-2">En pourcentage 0 à 100.</p>
+              </div>
+
+              <div>
+                <label for="Quality_Control_Defect_Rate_%" class="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1 flex items-center gap-2">
+                  <span class="w-5 h-5 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center text-xs">✅</span>
+                  Taux de défauts (%)
+                </label>
+                <input type="number" step="0.01" min="0" max="100" id="Quality_Control_Defect_Rate_%" name="Quality_Control_Defect_Rate_%"
+                       class="w-full input-focus rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-4 py-3 outline-none transition-all duration-200"
+                       placeholder="Ex. 1.8" required>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-2">Contrôle qualité en pourcentage.</p>
+              </div>
+
+              <div>
+                <label for="Error_Rate_%" class="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1 flex items-center gap-2">
+                  <span class="w-5 h-5 rounded-full bg-red-100 dark:bg-red-900 flex items-center justify-center text-xs">❌</span>
+                  Taux d'erreur (%)
+                </label>
+                <input type="number" step="0.01" min="0" max="100" id="Error_Rate_%" name="Error_Rate_%"
+                       class="w-full input-focus rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-4 py-3 outline-none transition-all duration-200"
+                       placeholder="Ex. 0.5" required>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-2">Erreurs systèmes ou process.</p>
+              </div>
+            </div>
+
+            <!-- Groupe 3: Production et temps -->
+            <div class="space-y-6">
+              <h3 class="text-lg font-semibold text-slate-700 dark:text-slate-300 border-b border-slate-200 dark:border-slate-700 pb-2">
+                🚀 Production & Temps
+              </h3>
+              
+              <div>
+                <label for="Production_Speed_units_per_hr" class="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1 flex items-center gap-2">
+                  <span class="w-5 h-5 rounded-full bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center text-xs">🚄</span>
+                  Vitesse de production (u/h)
+                </label>
+                <input type="number" step="1" min="0" id="Production_Speed_units_per_hr" name="Production_Speed_units_per_hr"
+                       class="w-full input-focus rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-4 py-3 outline-none transition-all duration-200"
+                       placeholder="Ex. 350" required>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-2">Unités produites par heure.</p>
+              </div>
+
+              <div>
+                <label for="Predictive_Maintenance_Score" class="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1 flex items-center gap-2">
+                  <span class="w-5 h-5 rounded-full bg-teal-100 dark:bg-teal-900 flex items-center justify-center text-xs">🔧</span>
+                  Score maintenance prédictive
+                </label>
+                <input type="number" step="0.01" id="Predictive_Maintenance_Score" name="Predictive_Maintenance_Score"
+                       class="w-full input-focus rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-4 py-3 outline-none transition-all duration-200"
+                       placeholder="Ex. 0.72" required>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-2">Score normalisé issu de votre pipeline.</p>
+              </div>
+
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label for="Year" class="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Année</label>
+                  <input type="number" step="1" min="2000" id="Year" name="Year"
+                         class="w-full input-focus rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-4 py-3 outline-none transition-all duration-200"
+                         placeholder="Ex. 2025" required>
+                </div>
+
+                <div>
+                  <label for="Month" class="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Mois</label>
+                  <input type="number" step="1" min="1" max="12" id="Month" name="Month"
+                         class="w-full input-focus rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-4 py-3 outline-none transition-all duration-200"
+                         placeholder="1 à 12" required>
+                </div>
+
+                <div>
+                  <label for="Day" class="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Jour</label>
+                  <input type="number" step="1" min="1" max="31" id="Day" name="Day"
+                         class="w-full input-focus rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-4 py-3 outline-none transition-all duration-200"
+                         placeholder="1 à 31" required>
+                </div>
+
+                <div>
+                  <label for="Hour" class="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Heure</label>
+                  <input type="number" step="1" min="0" max="23" id="Hour" name="Hour"
+                         class="w-full input-focus rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-4 py-3 outline-none transition-all duration-200"
+                         placeholder="0 à 23" required>
+                </div>
+              </div>
+              <p class="text-xs text-slate-500 dark:text-slate-400 mt-2">Composantes temporelles pour la saisonnalité.</p>
+            </div>
+          </div>
+
+          <!-- Boutons d'action -->
+          <div class="mt-8 flex flex-wrap gap-4 justify-center">
+            <button type="submit" class="btn-primary px-8 py-3 rounded-xl font-semibold text-white shadow-lg transition-all duration-300 flex items-center gap-2">
+              <span>🚀</span>
+              Lancer la prédiction
+            </button>
+            <button type="button" class="btn-secondary px-6 py-3 rounded-xl font-medium bg-slate-100 dark:bg-slate-700 text-slate-800 dark:text-slate-200 shadow-md transition-all duration-300 flex items-center gap-2" id="btn-example">
+              <span>🧪</span>
+              Remplir un exemple
+            </button>
+            <button type="reset" class="btn-secondary px-6 py-3 rounded-xl font-medium bg-slate-100 dark:bg-slate-700 text-slate-800 dark:text-slate-200 shadow-md transition-all duration-300 flex items-center gap-2">
+              <span>🔄</span>
+              Réinitialiser
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Section conseils -->
+    <section class="mb-8 animate-fade-in">
+      <div class="rounded-2xl shadow-lg border border-slate-200/60 dark:border-slate-700 bg-white/80 dark:bg-slate-800/80 backdrop-blur p-6">
+        <details class="group">
+          <summary class="cursor-pointer font-semibold text-lg flex items-center gap-2 text-slate-700 dark:text-slate-200">
+            <span class="transition-transform group-open:rotate-90">➤</span>
+            Conseils d'utilisation
+          </summary>
+          <div class="mt-4 pl-6 space-y-3 text-slate-600 dark:text-slate-300">
+            <div class="flex items-start gap-3">
+              <span class="w-5 h-5 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-xs mt-0.5 flex-shrink-0">✓</span>
+              <p>Respectez les unités indiquées pour de meilleures prédictions.</p>
+            </div>
+            <div class="flex items-start gap-3">
+              <span class="w-5 h-5 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-xs mt-0.5 flex-shrink-0">✓</span>
+              <p>Les champs en pourcentage acceptent des décimales, par exemple 0.25.</p>
+            </div>
+            <div class="flex items-start gap-3">
+              <span class="w-5 h-5 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-xs mt-0.5 flex-shrink-0">✓</span>
+              <p>Mode d'opération est un entier correspondant à votre encodage.</p>
+            </div>
+            <div class="flex items-start gap-3">
+              <span class="w-5 h-5 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-xs mt-0.5 flex-shrink-0">✓</span>
+              <p>Année, mois, jour, heure permettent au modèle de capter la saisonnalité.</p>
+            </div>
+          </div>
+        </details>
+      </div>
+    </section>
+  </main>
+
+  <footer class="max-w-7xl mx-auto px-4 pb-8 text-center">
+    <div class="rounded-2xl shadow-lg border border-slate-200/60 dark:border-slate-700 bg-white/80 dark:bg-slate-800/80 backdrop-blur p-6">
+      <p class="text-slate-600 dark:text-slate-400">© 2025 Smart Factory Analytics. Propulsé par Flask + scikit-learn.</p>
+      <p class="text-xs text-slate-500 dark:text-slate-500 mt-2">Système de prédiction de qualité en temps réel</p>
+    </div>
+  </footer>
+
+  <script>
+    // Exemple pour accélérer les tests
+    const ex = {
+      "Operation_Mode": 1,
+      "Temperature_C": 42.8,
+      "Vibration_Hz": 59.95,
+      "Power_Consumption_kW": 13.2,
+      "Network_Latency_ms": 12.7,
+      "Packet_Loss_%": 0.2,
+      "Quality_Control_Defect_Rate_%": 1.3,
+      "Production_Speed_units_per_hr": 360,
+      "Predictive_Maintenance_Score": 0.68,
+      "Error_Rate_%": 0.45,
+      "Year": 2025,
+      "Month": 10,
+      "Day": 16,
+      "Hour": 14
+    };
+
+    document.getElementById('btn-example').addEventListener('click', () => {
+      for (const [k, v] of Object.entries(ex)) {
+        const el = document.getElementById(k);
+        if (el) {
+          el.value = v;
+          // Animation de feedback
+          el.classList.add('ring-2', 'ring-primary-500');
+          setTimeout(() => {
+            el.classList.remove('ring-2', 'ring-primary-500');
+          }, 1000);
+        }
+      }
+      
+      // Animation du bouton
+      const btn = document.getElementById('btn-example');
+      btn.classList.add('bg-green-100', 'dark:bg-green-900');
+      setTimeout(() => {
+        btn.classList.remove('bg-green-100', 'dark:bg-green-900');
+      }, 1000);
+    });
+
+    // Validation simple côté client
+    document.getElementById('predict-form').addEventListener('submit', (e) => {
+      const requiredIds = [
+        "Operation_Mode","Temperature_C","Vibration_Hz","Power_Consumption_kW",
+        "Network_Latency_ms","Packet_Loss_%","Quality_Control_Defect_Rate_%",
+        "Production_Speed_units_per_hr","Predictive_Maintenance_Score","Error_Rate_%",
+        "Year","Month","Day","Hour"
+      ];
+      
+      let isValid = true;
+      for (const id of requiredIds) {
+        const el = document.getElementById(id);
+        if (!el || el.value === "") {
+          isValid = false;
+          // Animation d'erreur
+          el.classList.add('ring-2', 'ring-red-500');
+          setTimeout(() => {
+            el.classList.remove('ring-2', 'ring-red-500');
+          }, 2000);
+        }
+      }
+      
+      if (!isValid) {
+        e.preventDefault();
+        // Créer une notification d'erreur
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'fixed top-4 right-4 bg-red-500 text-white p-4 rounded-xl shadow-lg z-50 animate-fade-in';
+        errorDiv.innerHTML = `
+          <div class="flex items-center gap-2">
+            <span>⚠️</span>
+            <span>Merci de remplir tous les champs obligatoires</span>
+          </div>
+        `;
+        document.body.appendChild(errorDiv);
+        
+        setTimeout(() => {
+          errorDiv.remove();
+        }, 4000);
+      } else {
+        // Animation de chargement
+        const submitBtn = e.target.querySelector('button[type="submit"]');
+        submitBtn.innerHTML = `
+          <div class="flex items-center gap-2">
+            <div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+            <span>Calcul en cours...</span>
+          </div>
+        `;
+        submitBtn.disabled = true;
+      }
+    });
+
+    // Toggle thème sombre/clair
+    document.getElementById('theme-toggle').addEventListener('click', () => {
+      if (document.documentElement.classList.contains('dark')) {
+        document.documentElement.classList.remove('dark');
+        localStorage.setItem('theme', 'light');
+      } else {
+        document.documentElement.classList.add('dark');
+        localStorage.setItem('theme', 'dark');
+      }
+    });
+
+    // Vérifier la préférence de thème
+    if (localStorage.getItem('theme') === 'dark' || 
+        (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  </script>
+</body>
+</html>
