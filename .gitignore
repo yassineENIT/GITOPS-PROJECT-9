@@ -1,3 +1,5 @@
 venv/
 mlops_project_11.egg-info/
 logs/
+minikube-linux-amd64
+kubectl
